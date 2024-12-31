@@ -1,11 +1,7 @@
 
-resource "random_id" "template_id" {
-  byte_length = 4
-}
- 
 # Managed Instance Group 
 resource "google_compute_instance_template" "flask_template" {
-  name         =  "flask-template-${random_id.template_id.hex}"
+  name         =  "flask-template"
   machine_type = "e2-micro"
 
   tags = ["allow-flask", "allow-ssh"] 

@@ -30,6 +30,15 @@ if [[ -z "$LATEST_IMAGE" ]]; then
   exit 1
 fi
 
+CURRENT_IMAGE=$(gcloud compute instance-templates describe flask-template --format="get(properties.disks[0].initializeParams.sourceImage)" 2> /dev/null | awk -F'/' '{print $NF}')
+
+# Conditional block if CURRENT_IMAGE is not empty and not equal to LATEST_IMAGE
+if [[ -n "$CURRENT_IMAGE" && "$CURRENT_IMAGE" != "$LATEST_IMAGE" ]]; then
+  echo "NOTE: Updating resources as CURRENT_IMAGE ($CURRENT_IMAGE) is different from LATEST_IMAGE ($LATEST_IMAGE)."
+  gcloud compute backend-services remove-backend flask-backend-service --global --instance-group flask-instance-group --instance-group-zone us-central1-a 
+  gcloud compute instance-groups managed delete flask-instance-group --zone us-central1-a -q 
+fi
+
 cd 02-infrastucture/
 
 terraform init
