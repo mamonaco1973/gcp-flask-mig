@@ -1,27 +1,25 @@
 #!/bin/bash
 
-RESOURCE_GROUP="flask-vmss-rg"
+# This script deletes all images in the current Google Cloud project with the family "flask-images".
 
-# List all images in the resource group
-echo "NOTE: Fetching images in resource group: $RESOURCE_GROUP..."
-az login --service-principal --username $ARM_CLIENT_ID --password $ARM_CLIENT_SECRET --tenant $ARM_TENANT_ID > /dev/null
-images=$(az image list --resource-group "$RESOURCE_GROUP" --query "[].{Name:name}" -o tsv)
+# Set the image family to filter
+IMAGE_FAMILY="flask-images"
 
-if [ -z "$images" ]; then
-    echo "WARNING: No images found in the resource group $RESOURCE_GROUP."
-    exit 0
+# Retrieve all images with the specified family
+IMAGES=$(gcloud compute images list --filter="family=${IMAGE_FAMILY}" --format="value(name)")
+
+# Check if any images were found
+if [ -z "$IMAGES" ]; then
+  echo "WARNING: No images found with the family '${IMAGE_FAMILY}'."
+  exit 0
 fi
 
-# Iterate through the list of images and delete them
-echo "NOTE: Deleting images in resource group: $RESOURCE_GROUP..."
-for image in $images; do
-    echo "NOTE: Deleting image: $image"
-    az image delete --resource-group "$RESOURCE_GROUP" --name "$image"
-    if [ $? -eq 0 ]; then
-        echo "NOTE: Deleted image: $image"
-    else
-        echo "WARNING: Failed to delete image: $image"
-    fi
+# Loop through the images and delete each one
+echo "NOTE: Deleting images with the family '${IMAGE_FAMILY}'..."
+for IMAGE in $IMAGES; do
+  echo "NOTE: Deleting image: $IMAGE"
+  gcloud compute images delete "$IMAGE" --quiet
 done
 
-echo "NOTE: All images in the resource group $RESOURCE_GROUP have been processed."
+echo "NOTE: All images with the family '${IMAGE_FAMILY}' have been deleted."
+

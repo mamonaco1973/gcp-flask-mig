@@ -1,34 +1,38 @@
 #!/bin/bash
 
-# Second phase - Run the packer build to build the application after we have the resource group
+# Second phase - build GCP infrastructure
 
-cd 02-packer
-echo "NOTE: Phase 2 Building Image with packer."
-
-az login --service-principal --username $ARM_CLIENT_ID --password $ARM_CLIENT_SECRET --tenant $ARM_TENANT_ID > /dev/null
-
-# Fetch the COSMOS_ENDPOINT dynamically
-COSMOS_ENDPOINT=$(az cosmosdb list --resource-group flask-vmss-rg \
-    --query "[?starts_with(name, 'candidates')].{url:documentEndpoint}[0].url" \
-    --output tsv)
-
-# Check if the COSMOS_ENDPOINT was successfully fetched
-if [ -z "$COSMOS_ENDPOINT" ]; then
-    echo "ERROR: Failed to fetch the Cosmos DB endpoint."
-    exit 1
+# Check if the file "./credentials.json" exists
+if [[ ! -f "./credentials.json" ]]; then
+  echo "ERROR: The file './credentials.json' does not exist." >&2
+  exit 1
 fi
 
-# Use the COSMOS_ENDPOINT
-echo "NOTE: COSMOS_ENDPOINT is set to: $COSMOS_ENDPOINT"
+echo "NOTE: Phase 2 Building GCP Infrastructure"
 
-packer init .
+# Extract the project_id using jq
+project_id=$(jq -r '.project_id' "./credentials.json")
 
-packer build \
-  -var="client_id=$ARM_CLIENT_ID" \
-  -var="client_secret=$ARM_CLIENT_SECRET" \
-  -var="subscription_id=$ARM_SUBSCRIPTION_ID" \
-  -var="tenant_id=$ARM_TENANT_ID" \
-  -var="COSMOS_ENDPOINT=$COSMOS_ENDPOINT" \
-  flask_image.pkr.hcl
+gcloud auth activate-service-account --key-file="./credentials.json" > /dev/null 2> /dev/null
+export GOOGLE_APPLICATION_CREDENTIALS="../credentials.json"
+
+gcloud config set project $project_id
+
+LATEST_IMAGE=$(gcloud compute images list \
+  --filter="name~'^flask-packer-image' AND family=flask-images" \
+  --sort-by="~creationTimestamp" \
+  --limit=1 \
+  --format="value(name)")
+
+# Check if LATEST_IMAGE is empty
+if [[ -z "$LATEST_IMAGE" ]]; then
+  echo "ERROR: No latest image found for 'flask-packer-image' in family 'flask-images'."
+  exit 1
+fi
+
+cd 02-infrastucture/
+
+terraform init
+terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
 
 cd ..

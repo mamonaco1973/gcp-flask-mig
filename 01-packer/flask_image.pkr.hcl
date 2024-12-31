@@ -14,7 +14,6 @@ locals {
 variable "project_id" {
   description = "GCP Project ID"
   type        = string
-  default     = "debug-project-446221"
 }
 
 variable "zone" {

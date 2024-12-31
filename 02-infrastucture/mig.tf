@@ -1,7 +1,11 @@
 
+resource "random_id" "template_id" {
+  byte_length = 4
+}
+ 
 # Managed Instance Group 
 resource "google_compute_instance_template" "flask_template" {
-  name        = "flask-template"
+  name         =  "flask-template-${random_id.template_id.hex}"
   machine_type = "e2-micro"
 
   tags = ["allow-flask", "allow-ssh"] 
@@ -78,7 +82,6 @@ resource "google_compute_autoscaler" "autoscaler" {
 variable "flask_image_name" {
   description = "Name of the Packer-built image to use in the instance template"
   type        = string
-  default     = "flask-packer-image-20241230153129"
 }
 
 # Reference the existing Packer-built image
