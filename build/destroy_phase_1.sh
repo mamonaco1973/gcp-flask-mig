@@ -30,7 +30,6 @@ if [[ -z "$LATEST_IMAGE" ]]; then
   exit 1
 fi
 
-cd ..
 cd 02-infrastructure/
 
 terraform init
