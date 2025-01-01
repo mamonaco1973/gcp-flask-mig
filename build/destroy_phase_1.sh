@@ -30,7 +30,8 @@ if [[ -z "$LATEST_IMAGE" ]]; then
   exit 1
 fi
 
-cd 02-infrastucture/
+cd ..
+cd 02-infrastructure/
 
 terraform init
 terraform destroy -var="flask_image_name=$LATEST_IMAGE" -auto-approve

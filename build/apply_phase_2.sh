@@ -39,7 +39,7 @@ if [[ -n "$CURRENT_IMAGE" && "$CURRENT_IMAGE" != "$LATEST_IMAGE" ]]; then
   gcloud compute instance-groups managed delete flask-instance-group --zone us-central1-a -q 
 fi
 
-cd 02-infrastucture/
+cd 02-infrastructure/
 
 terraform init
 terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve

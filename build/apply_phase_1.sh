@@ -15,7 +15,7 @@ gcloud auth activate-service-account --key-file="./credentials.json" > /dev/null
 export GOOGLE_APPLICATION_CREDENTIALS="../credentials.json"
 
 cd 01-packer
-echo "NOTE: Phase 1 Building Packer Image"
+echo "NOTE: Phase 1 Building Image with Packer"
 
 packer init .
 

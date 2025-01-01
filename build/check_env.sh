@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "NOTE: Validating that required commands are found."
+echo "NOTE: Validating that required commands are found in the PATH."
 
 # List of required commands
 commands=("gcloud" "packer" "terraform")
