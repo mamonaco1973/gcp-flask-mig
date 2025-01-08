@@ -1,112 +1,106 @@
-# Managed Instance Group
-
 # Instance Template
-# Defines the configuration for VM instances in the managed instance group.
+# This resource defines the template used to create instances in the managed instance group.
 resource "google_compute_instance_template" "flask_template" {
-  name         = "flask-template"                       # Unique name for the instance template.
-  machine_type = "e2-micro"                             # Specifies the machine type for the instances.
+  name         = "flask-template"                                       # Name of the instance template
+  machine_type = "e2-micro"                                             # Machine type specifies the type of virtual machine to use
 
-  # Tags for network firewall rules
-  tags = ["allow-flask", "allow-ssh"]                   # Tags used to apply firewall rules.
+  # Tags for the VM instances
+  # These tags are used for network firewall rules (e.g., allowing HTTP and SSH traffic)
+  tags = ["allow-flask", "allow-ssh"]
 
   # Disk configuration
   disk {
-    auto_delete  = true                                 # Automatically deletes the disk when the instance is deleted.
-    boot         = true                                 # Marks this disk as the boot disk.
-    source_image = data.google_compute_image.flask_packer_image.self_link 
-                                                        # Source image for the boot disk.
+    auto_delete  = true                                                   # Disk will be deleted when the instance is deleted
+    boot         = true                                                   # Marks this disk as the boot disk
+    source_image = data.google_compute_image.flask_packer_image.self_link # Uses the Packer-built image
   }
 
   # Network configuration
   network_interface {
-    network    = google_compute_network.flask_vpc.id       # Specifies the custom VPC network.
-    subnetwork = google_compute_subnetwork.flask_subnet.id # Specifies the custom subnet within the VPC.
+    network    = google_compute_network.flask_vpc.id                    # VPC network reference
+    subnetwork = google_compute_subnetwork.flask_subnet.id              # Subnet within the VPC
   }
 
   # Service account configuration
   service_account {
-    email  = local.service_account_email                # Service account used by the instances.
-    scopes = ["https://www.googleapis.com/auth/cloud-platform"] 
-                                                        # Scopes granted to the service account.
+    email  = local.service_account_email                                # Service account email address
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]         # Scopes for API access
   }
 }
 
-# Instance Group Manager
-# Manages a group of identical instances based on the instance template.
-resource "google_compute_instance_group_manager" "instance_group_manager" {
-  name               = "flask-instance-group"           # Unique name for the instance group manager.
-  base_instance_name = "flask-instance"                 # Prefix for instance names in the group.
-  target_size        = 2                                # Desired number of instances in the group.
-  zone               = "us-central1-a"                  # Zone where the instances will be created.
+# Regional Managed Instance Group
+# Defines a managed instance group to automatically manage multiple instances
+resource "google_compute_region_instance_group_manager" "instance_group_manager" {
+  name               = "flask-instance-group"                           # Name of the managed instance group
+  base_instance_name = "flask-instance"                                 # Base name for the instances in the group
+  target_size        = 2                                                # Desired number of instances in the group
+  region             = "us-central1"                                    # Region where the group will be deployed
 
-  # Specifies the version and template for the instances.
+  # Instance template to use for creating instances
   version {
     instance_template = google_compute_instance_template.flask_template.self_link
   }
 
   # Named port for the instance group
   named_port {
-    name = "http"                                      # Name of the port.
-    port = 8000                                        # Port number for HTTP traffic.
+    name = "http"                                                       # Name of the port
+    port = 8000                                                         # Port number for the HTTP service
   }
 
   # Auto-healing policies
-  # Configures health checks and initial delay before auto-healing.
   auto_healing_policies {
-    health_check      = google_compute_health_check.http_health_check.self_link 
-                                                        # Health check resource reference.
-    initial_delay_sec = 300                             # Wait time before starting auto-healing.
+    health_check      = google_compute_health_check.http_health_check.self_link # Health check resource
+    initial_delay_sec = 300                                             # Time (in seconds) to wait before checking instance health
   }
 }
 
 # Health Check
-# Monitors the health of instances in the group and triggers auto-healing if necessary.
+# Monitors the health of instances in the instance group
 resource "google_compute_health_check" "http_health_check" {
-  name                = "http-health-check"             # Unique name for the health check.
-  check_interval_sec  = 5                               # Time between health check attempts.
-  timeout_sec         = 5                               # Time to wait for a health check response.
-  healthy_threshold   = 2                               # Number of consecutive successes to mark as healthy.
-  unhealthy_threshold = 2                               # Number of consecutive failures to mark as unhealthy.
+  name                = "http-health-check"                             # Name of the health check
+  check_interval_sec  = 5                                               # Frequency (in seconds) of health checks
+  timeout_sec         = 5                                               # Timeout (in seconds) for each health check
+  healthy_threshold   = 2                                               # Number of successful checks to mark the instance as healthy
+  unhealthy_threshold = 2                                               # Number of failed checks to mark the instance as unhealthy
 
   # HTTP-specific health check configuration
   http_health_check {
-    request_path = "/gtg"                               # Path to request for the health check.
-    port         = 8000                                 # Port to use for the health check.
+    request_path = "/gtg"                                               # Path to send health check requests
+    port         = 8000                                                 # Port for the HTTP service
   }
 }
 
-# Autoscaler
-# Configures autoscaling for the instance group to ensure optimal resource usage.
-resource "google_compute_autoscaler" "autoscaler" {
-  name   = "flask-autoscaler"                          # Unique name for the autoscaler.
-  target = google_compute_instance_group_manager.instance_group_manager.self_link 
-                                                       # Target instance group to scale.
-  zone   = "us-central1-a"                             # Zone where the autoscaler operates.
+# Regional Autoscaler
+# Automatically adjusts the number of instances in the managed instance group
+resource "google_compute_region_autoscaler" "autoscaler" {
+  name   = "flask-autoscaler"                                           # Name of the autoscaler
+  target = google_compute_region_instance_group_manager.instance_group_manager.self_link # Target managed instance group
+  region = "us-central1"                                                # Region where the autoscaler operates
 
-  # Autoscaling policy
+  # Autoscaling policy configuration
   autoscaling_policy {
-    max_replicas      = 4                               # Maximum number of instances.
-    min_replicas      = 2                               # Minimum number of instances.
+    max_replicas      = 4                                               # Maximum number of instances
+    min_replicas      = 2                                               # Minimum number of instances
 
-    # CPU utilization-based scaling
+    # Target CPU utilization for scaling
     cpu_utilization {
-      target = 0.6                                      # Target CPU utilization (60%).
+      target = 0.6                                                      # Scale based on 60% CPU usage
     }
 
-    cooldown_period = 60                                # Cooldown period between scaling actions.
+    cooldown_period = 60                                                # Time (in seconds) to wait between scaling actions
   }
 }
 
 # Variable for Image Name
-# Allows dynamic specification of the Packer-built image name.
+# Defines a variable to pass the name of the Packer-built image
 variable "flask_image_name" {
-  description = "Name of the Packer-built image to use in the instance template" # Description of the variable.
-  type        = string                     # Specifies that the variable is of string type.
+  description = "Name of the Packer-built image to use in the instance template" # Description of the variable
+  type        = string                                                           # Type of the variable
 }
 
 # Data Resource for Packer-Built Image
-# Fetches details of the specified Packer-built image.
+# Retrieves information about the Packer-built image from GCP
 data "google_compute_image" "flask_packer_image" {
-  name    = var.flask_image_name          # Name of the image to fetch.
-  project = local.credentials.project_id  # Project where the image is located.
+  name    = var.flask_image_name                                    # Name of the image
+  project = local.credentials.project_id                            # GCP project ID
 }

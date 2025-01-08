@@ -19,7 +19,7 @@ resource "google_compute_backend_service" "backend_service" {
 
   # Backend block defines the backend instance group and its load balancing properties.
   backend {
-    group           = google_compute_instance_group_manager.instance_group_manager.instance_group # Reference to the instance group.
+    group           = google_compute_region_instance_group_manager.instance_group_manager.instance_group # Reference to the instance group.
     balancing_mode  = "UTILIZATION"                        # Balances traffic based on resource utilization.
   }
 
