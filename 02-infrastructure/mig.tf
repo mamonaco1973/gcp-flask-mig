@@ -52,6 +52,7 @@ resource "google_compute_region_instance_group_manager" "instance_group_manager"
     health_check      = google_compute_health_check.http_health_check.self_link # Health check resource
     initial_delay_sec = 300                                             # Time (in seconds) to wait before checking instance health
   }
+
 }
 
 # Health Check
