@@ -128,12 +128,12 @@ We will access the VM instances and execute the `stress` command to simulate a h
 ### How Scaling Works
 
 #### 1. **Managed Instance Group (MIG):**
-- The **Managed Instance Group** (`google_compute_instance_group_manager`) ensures that a group of identical VM instances is maintained.
+- The **Managed Instance Group** (`google_compute_region_instance_group_manager`) ensures that a group of identical VM instances is maintained.
 - It uses an **Instance Template** to define the configuration for all instances (e.g., machine type, boot image, and network settings).
 - The MIG initially starts with a **target size** of 2 instances and supports auto-healing based on a health check.
 
 #### 2. **Health Check for Auto-Healing:**
-- A **Health Check** (`google_compute_health_check`) is configured to monitor the `/gtg` endpoint on port `8000` of the instances.
+- A **Health Check** (`google_compute_region_autoscaler`) is configured to monitor the `/gtg` endpoint on port `8000` of the instances.
 - If an instance is deemed unhealthy (fails the health check), the MIG automatically replaces it with a new instance.
 
 #### 3. **Autoscaler for Dynamic Scaling:**
