@@ -26,7 +26,7 @@ while true; do
   
   if [ "$HTTP_CODE" -eq 200 ]; then
      echo "NOTE: Health check endpoint is http://$FLASK_LB_IP/gtg?details=true"
-     ./01-packer/scripts/test_candidates.py $FLASK_LB_IP
+     ./02-packer/scripts/test_candidates.py $FLASK_LB_IP
      exit 0
     break
   else
