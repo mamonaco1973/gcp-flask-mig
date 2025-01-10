@@ -41,8 +41,8 @@ fi
 
 cd 03-mig
 
-gcloud compute health-checks describe http-health-check 
 terraform init
+terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
 terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
 
 cd ..

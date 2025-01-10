@@ -48,8 +48,8 @@ if ($CURRENT_IMAGE -and ($CURRENT_IMAGE -ne $LATEST_IMAGE)) {
 
 Set-Location "03-mig"
 
-gcloud compute health-checks describe http-health-check 
 terraform init
+terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
 terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
 
 Set-Location ".."
