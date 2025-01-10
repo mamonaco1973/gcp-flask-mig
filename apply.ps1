@@ -11,6 +11,7 @@ if ($returnCode -ne 0) {
 # Proceed if check_env.ps1 succeeded
 ./build/apply_phase_1.ps1
 ./build/apply_phase_2.ps1
+./build/apply_phase_3.ps1
 
 Write-Host "NOTE: Validating Build"
 ./validate.ps1

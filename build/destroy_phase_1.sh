@@ -8,7 +8,7 @@ if [[ ! -f "./credentials.json" ]]; then
   exit 1
 fi
 
-echo "NOTE: Destroying GCP Infrastucture"
+echo "NOTE: Destroying MIG Instance"
 
 # Extract the project_id using jq
 project_id=$(jq -r '.project_id' "./credentials.json")
@@ -30,7 +30,7 @@ if [[ -z "$LATEST_IMAGE" ]]; then
   exit 1
 fi
 
-cd 02-infrastructure/
+cd 03-mig
 
 terraform init
 terraform destroy -var="flask_image_name=$LATEST_IMAGE" -auto-approve

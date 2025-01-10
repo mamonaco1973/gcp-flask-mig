@@ -90,3 +90,19 @@ resource "google_compute_router_nat" "flask_nat" {
   nat_ip_allocate_option              = "AUTO_ONLY"                             # Automatically allocate IPs for NAT.
   source_subnetwork_ip_ranges_to_nat  = "ALL_SUBNETWORKS_ALL_IP_RANGES"         # Apply NAT to all subnets and IP ranges.
 }
+
+# Health Check
+# Monitors the health of instances in the instance group
+resource "google_compute_health_check" "http_health_check" {
+  name                = "http-health-check"                             # Name of the health check
+  check_interval_sec  = 5                                               # Frequency (in seconds) of health checks
+  timeout_sec         = 5                                               # Timeout (in seconds) for each health check
+  healthy_threshold   = 2                                               # Number of successful checks to mark the instance as healthy
+  unhealthy_threshold = 2                                               # Number of failed checks to mark the instance as unhealthy
+
+  # HTTP-specific health check configuration
+  http_health_check {
+    request_path = "/gtg"                                               # Path to send health check requests
+    port         = 8000                                                 # Port for the HTTP service
+  }
+}

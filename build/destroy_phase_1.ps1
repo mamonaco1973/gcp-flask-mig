@@ -8,7 +8,7 @@ if (!(Test-Path "./credentials.json")) {
     exit 1
 }
 
-Write-Host "NOTE: Destroying GCP Infrastructure"
+Write-Host "NOTE: Destroying MIG"
 
 # Extract the project_id using ConvertFrom-Json
 $jsonContent = Get-Content "./credentials.json" | ConvertFrom-Json
@@ -35,7 +35,7 @@ if ([string]::IsNullOrEmpty($LATEST_IMAGE)) {
 
 # Navigate to the 02-infrastructure directory
 
-Set-Location "02-infrastructure/"
+Set-Location "03-mig/"
 
 # Initialize and destroy Terraform configuration
 terraform init

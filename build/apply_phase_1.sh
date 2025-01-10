@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# First phase - Build the packer image
+# First phase - build GCP infrastructure
 
 # Check if the file "./credentials.json" exists
 if [[ ! -f "./credentials.json" ]]; then
@@ -8,19 +8,11 @@ if [[ ! -f "./credentials.json" ]]; then
   exit 1
 fi
 
-# Extract the project_id using jq
-project_id=$(jq -r '.project_id' "./credentials.json")
+echo "NOTE: Phase 1 Building GCP Infrastructure"
 
-gcloud auth activate-service-account --key-file="./credentials.json" > /dev/null 2> /dev/null
-export GOOGLE_APPLICATION_CREDENTIALS="../credentials.json"
+cd 01-infrastructure/
 
-cd 01-packer
-echo "NOTE: Phase 1 Building Image with Packer"
-
-packer init .
-
-packer build \
-  -var="project_id=$project_id"  \
-  flask_image.pkr.hcl
+terraform init
+terraform apply -auto-approve
 
 cd ..

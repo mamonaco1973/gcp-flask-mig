@@ -12,7 +12,7 @@ resource "google_compute_backend_service" "backend_service" {
   name                  = "flask-backend-service"        # Unique name for the backend service.
   protocol              = "HTTP"                         # Protocol used for communication with backend instances.
   port_name             = "http"                         # Matches the named port in the instance group configuration.
-  health_checks         = [google_compute_health_check.http_health_check.self_link] 
+  health_checks         = [data.google_compute_health_check.http_health_check.self_link] 
                                                          # Reference to the health check resource.
   timeout_sec           = 10                             # Timeout for backend instance response in seconds.
   load_balancing_scheme = "EXTERNAL"                     # Specifies this is an external load balancer.
@@ -22,9 +22,6 @@ resource "google_compute_backend_service" "backend_service" {
     group           = google_compute_region_instance_group_manager.instance_group_manager.instance_group # Reference to the instance group.
     balancing_mode  = "UTILIZATION"                        # Balances traffic based on resource utilization.
   }
-
-  # Ensures the backend service waits for the health check to be created before configuring.
-  depends_on = [google_compute_health_check.http_health_check]
 }
 
 # URL Map

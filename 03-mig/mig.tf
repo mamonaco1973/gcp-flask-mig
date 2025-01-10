@@ -17,8 +17,8 @@ resource "google_compute_instance_template" "flask_template" {
 
   # Network configuration
   network_interface {
-    network    = google_compute_network.flask_vpc.id                    # VPC network reference
-    subnetwork = google_compute_subnetwork.flask_subnet.id              # Subnet within the VPC
+    network    = data.google_compute_network.flask_vpc.id                    # VPC network reference
+    subnetwork = data.google_compute_subnetwork.flask_subnet.id              # Subnet within the VPC
   }
 
   # Service account configuration
@@ -35,7 +35,7 @@ resource "google_compute_region_instance_group_manager" "instance_group_manager"
   base_instance_name = "flask-instance"                                 # Base name for the instances in the group
   target_size        = 2                                                # Desired number of instances in the group
   region             = "us-central1"                                    # Region where the group will be deployed
-
+ 
   # Instance template to use for creating instances
   version {
     instance_template = google_compute_instance_template.flask_template.self_link
@@ -49,25 +49,9 @@ resource "google_compute_region_instance_group_manager" "instance_group_manager"
 
   # Auto-healing policies
   auto_healing_policies {
-    health_check      = google_compute_health_check.http_health_check.self_link # Health check resource
+    health_check      = data.google_compute_health_check.http_health_check.self_link 
+                                                                        # Health check resource
     initial_delay_sec = 300                                             # Time (in seconds) to wait before checking instance health
-  }
-
-}
-
-# Health Check
-# Monitors the health of instances in the instance group
-resource "google_compute_health_check" "http_health_check" {
-  name                = "http-health-check"                             # Name of the health check
-  check_interval_sec  = 5                                               # Frequency (in seconds) of health checks
-  timeout_sec         = 5                                               # Timeout (in seconds) for each health check
-  healthy_threshold   = 2                                               # Number of successful checks to mark the instance as healthy
-  unhealthy_threshold = 2                                               # Number of failed checks to mark the instance as unhealthy
-
-  # HTTP-specific health check configuration
-  http_health_check {
-    request_path = "/gtg"                                               # Path to send health check requests
-    port         = 8000                                                 # Port for the HTTP service
   }
 }
 

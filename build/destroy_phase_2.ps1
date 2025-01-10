@@ -1,22 +1,22 @@
-# This script deletes all images in the current Google Cloud project with the family "flask-images".
+# PowerShell script to delete GCP infrastructure
 
-# Set the image family to filter
-$imageFamily = "flask-images"
+# First phase - delete GCP infrastructure
 
-# Retrieve all images with the specified family
-$images = gcloud compute images list --filter="family=$imageFamily" --format="value(name)"
-
-# Check if any images were found
-if (-not $images) {
-    Write-Host "WARNING: No images found with the family '$imageFamily'."
-    exit 0
+# Check if the file "./credentials.json" exists
+if (!(Test-Path "./credentials.json")) {
+    Write-Error "The file './credentials.json' does not exist."
+    exit 1
 }
 
-# Loop through the images and delete each one
-Write-Host "NOTE: Deleting images with the family '$imageFamily'..."
-foreach ($image in $images) {
-    Write-Host "NOTE: Deleting image: $image"
-    gcloud compute images delete $image --quiet
-}
+Write-Host "NOTE: Destroying GCP Infrastructure"
 
-Write-Host "NOTE: All images with the family '$imageFamily' have been deleted."
+# Navigate to the 01-infrastructure directory
+
+Set-Location "01-infrastructure/"
+
+# Initialize and destroy Terraform configuration
+terraform init
+terraform destroy -auto-approve
+
+# Return to the original directory
+Set-Location ..
