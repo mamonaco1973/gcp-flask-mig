@@ -39,10 +39,17 @@ terraform init
 # Conditional block if CURRENT_IMAGE is not empty and not equal to LATEST_IMAGE
 if ($CURRENT_IMAGE -and ($CURRENT_IMAGE -ne $LATEST_IMAGE)) {
     Write-Host "NOTE: Updating resources as CURRENT_IMAGE ($CURRENT_IMAGE) is different from LATEST_IMAGE ($LATEST_IMAGE)."
-    terraform destroy -var="flask_image_name=$LATEST_IMAGE" -auto-approve  
+    terraform destroy -var="flask_image_name=$CURRENT_IMAGE" -auto-approve  
 }
 
 terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
-terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
+
+# Check the exit code of the first Terraform apply
+# There is a terraform bug about http health check readiness that sometimes requires
+# a second apply
+
+if ($LASTEXITCODE -ne 0) {
+    terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
+} 
 
 Set-Location ".."

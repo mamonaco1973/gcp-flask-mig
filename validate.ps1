@@ -17,7 +17,7 @@ if (-Not $FLASK_LB_IP) {
 }
 
 # Define the URL for the health check endpoint
-$URL = "http://$FLASK_LB_IP/gtg"
+$URL = "http://$FLASK_LB_IP/candidates"
 
 # Start the health check loop
 while ($true) {
@@ -35,5 +35,5 @@ while ($true) {
         # Suppress any exceptions
          Write-Warning "Waiting for the load balancer to become active."
     }
-    Start-Sleep -Seconds 30
+    Start-Sleep -Seconds 60
 }
