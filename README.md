@@ -44,23 +44,23 @@ NOTE: terraform is found in the current PATH.
 NOTE: All required commands are available.
 NOTE: Validating credentials.json and test the gcloud command
 Activated service account credentials for: [terraform-build@debug-project-446221.iam.gserviceaccount.com]
-NOTE: Phase 1 Building Image with Packer
-googlecompute.packer_build_image: output will be in this color.
+NOTE: Phase 1 Building GCP Infrastructure
+Initializing the backend...
+Initializing provider plugins...
+- Reusing previous version of hashicorp/google from the dependency lock file
+- Using previously-installed hashicorp/google v6.15.0
 
-==> googlecompute.packer_build_image: Checking image does not exist...
-==> googlecompute.packer_build_image: Creating temporary RSA SSH key for instance...
-==> googlecompute.packer_build_image: no persistent disk to create
-==> googlecompute.packer_build_image: Using image: ubuntu-2404-noble-amd64-v20241219
-==> googlecompute.packer_build_image: Creating instance...
-    googlecompute.packer_build_image: Loading zone: us-central1-a
-    googlecompute.packer_build_image: Loading machine type: e2-micro
-    googlecompute.packer_build_image: Requesting instance creation...
-    googlecompute.packer_build_image: Waiting for creation operation to complete...
-    googlecompute.packer_build_image: Instance has been created!
-==> googlecompute.packer_build_image: Waiting for the instance to become running...
-    googlecompute.packer_build_image: IP: 34.57.89.191
-==> googlecompute.packer_build_image: Using SSH communicator to connect: 34.57.89.191
-==> googlecompute.packer_build_image: Waiting for SSH to become available...
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+
+Terraform will perform the following actions:
 [...]
 ```
 
