@@ -33,22 +33,15 @@ $CURRENT_IMAGE = gcloud compute instance-templates describe flask-template `
         ($_ -split '/')[ -1 ]
     }
 
+Set-Location "03-mig"
+terraform init
+
 # Conditional block if CURRENT_IMAGE is not empty and not equal to LATEST_IMAGE
 if ($CURRENT_IMAGE -and ($CURRENT_IMAGE -ne $LATEST_IMAGE)) {
     Write-Host "NOTE: Updating resources as CURRENT_IMAGE ($CURRENT_IMAGE) is different from LATEST_IMAGE ($LATEST_IMAGE)."
-    gcloud compute backend-services remove-backend flask-backend-service `
-        --global `
-        --instance-group flask-instance-group `
-        --instance-group-zone us-central1-a 
-
-    gcloud compute instance-groups managed delete flask-instance-group `
-        --zone us-central1-a `
-        -q 
+    terraform destroy -var="flask_image_name=$LATEST_IMAGE" -auto-approve  
 }
 
-Set-Location "03-mig"
-
-terraform init
 terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
 terraform apply -var="flask_image_name=$LATEST_IMAGE" -auto-approve
 
