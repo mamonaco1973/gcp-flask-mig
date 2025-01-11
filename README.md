@@ -33,7 +33,7 @@ cd gcp-flask-mig
 
 ## Build the Code
 
-Run [check_env](build\check_env.sh) and [api_setup](build\api_setup.sh) then run [apply](apply.sh).
+Run [check_env](build/check_env.sh) and [api_setup](build/api_setup.sh) then run [apply](apply.sh).
 
 ```bash
 ~/gcp-flask-mig$ ./apply.sh
