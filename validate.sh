@@ -19,7 +19,7 @@ fi
 
 #!/bin/bash
 
-URL="http://$FLASK_LB_IP/gtg"
+URL="http://$FLASK_LB_IP/candidates"
 
 while true; do
   HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" "$URL")
@@ -31,6 +31,6 @@ while true; do
     break
   else
     echo "WARNING: Waiting for the load balancer to become active."
-    sleep 30  
+    sleep 60  
   fi
 done
