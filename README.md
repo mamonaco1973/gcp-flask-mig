@@ -66,10 +66,11 @@ googlecompute.packer_build_image: output will be in this color.
 
 ## Build Process Overview
 
-The build process is divided into two phases:
+The build process is divided into three phases:
 
-1. **Phase 1:** Build the Flask services into a VM image using Packer.
-2. **Phase 2:** Create a simple network and set up the Managed Instance Group (MIG) using the image built in Phase 1. The scaling policies are also configured for the MIG.
+1. **Phase 1:** Build the network infrastructure for the project.  
+2. **Phase 2:** Use Packer to create a VM image containing the Flask services.  
+3. **Phase 3:** Configure a Managed Instance Group (MIG) using the VM image from Phase 2, along with the scaling policies.  
 
 
 ## Tour of Build Output in the GCP Console
