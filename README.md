@@ -1,194 +1,127 @@
-# GCP Managed Instance Group (MIG) Example
+# Flask Microservice on a GCP Managed Instance Group
 
-This is Part 3 of the Series: [Scaling in the Cloud: AWS Auto Scaling, Azure VMSS, and GCP MIGs](https://youtu.be/fogz73FXJEA).
+Part 3 of the series
+[Scaling in the Cloud: AWS Auto Scaling, Azure VMSS, and GCP MIGs](https://youtu.be/fogz73FXJEA).
+A small Flask service that stores candidates in **Firestore** is baked into a
+Compute Engine image with **Packer**, then run behind a global **HTTP load
+balancer** in a regional **managed instance group** that adds and removes
+instances on CPU load.
 
-## Introduction
+![Instance group in the console](flask-mig.png)
 
-In this video, we will demonstrate the deployment of Flask-based microservices within a **GCP Managed Instance Group (MIG)** while covering the following tasks:
+| Piece | Where | Role |
+|---|---|---|
+| **flask-packer-image** | image family `flask-images` | Ubuntu 24.04 + the Flask app under gunicorn (systemd), `stress` for load tests |
+| **flask-template** | instance template | `e2-micro` from the newest image; no public IP; tags `allow-flask`, `allow-ssh` |
+| **flask-instance-group** | `us-central1` (regional) | 2 to 4 instances; named port `http` = 8000; autohealing on `/gtg` after 300 s |
+| **flask-autoscaler** | `us-central1` | target 60% CPU, 60-second cooldown |
+| **HTTP load balancer** | global | `flask-lb-ip` on 80, `flask-http-proxy`, URL map `flask-alb`, `flask-backend-service` |
+| **Firestore** | `us-central1` | native mode database, created by `api_setup.sh` |
+| **Cloud NAT** | `us-central1` | outbound internet for the instances |
 
-- **Deploy Flask-based microservices** on GCP VMs.
-- **Utilize Firestore** as a document database to store microservice data.
-- **Create a VM image** of the deployed services using Packer.
-- **Configure the Managed Instance Group** to enable automatic scalability using `Terraform`.
-- **Simulate load** to test scalability and trigger scaling events.
-- **Clean up resources** by decommissioning all infrastructure provisioned during the process.
+## Architecture
 
-![GCP diagram](gcp-flask-mig.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="architecture-dark.svg">
+  <img alt="Packer builds flask-packer-image from the Ubuntu 24.04 LTS family with the Flask service, gunicorn and stress. flask-template, an e2-micro template with no public IP, uses the newest image for flask-instance-group, a regional managed instance group of two to four instances with autohealing. Clients reach the service through a global HTTP load balancer on port 80, which forwards to port 8000 and health-checks /gtg. flask-autoscaler targets 60% CPU, and the service reads and writes Firestore." src="architecture-light.svg">
+</picture>
+
+Regenerate with `python3 make_diagram.py`.
+
+- **`01-infrastructure/`**: the VPC (`flask-vpc`) with `flask-subnet`
+  (10.0.0.0/24), the firewall rules, Cloud Router and NAT, the `/gtg` health
+  check, and the service account's `roles/datastore.user` binding.
+- **`02-packer/`**: `flask_image.pkr.hcl`, `install.sh` and the app in
+  `scripts/`.
+- **`03-mig/`**: the instance template, the instance group and autoscaler,
+  and the load balancer.
+- **`build/`**: the per-phase scripts `apply.sh` and `destroy.sh` call, in
+  Bash and PowerShell, plus `api_setup.sh`.
+
+## How it builds
+
+1. **Phase 1**: Terraform builds the network, NAT, health check and IAM.
+2. **Phase 2**: Packer builds `flask-packer-image-<timestamp>` in the
+   `flask-images` family.
+3. **Phase 3**: Terraform finds the newest image and builds the template,
+   instance group, autoscaler and load balancer.
+
+## How it scales
+
+The autoscaler keeps the group's average CPU near **60%**, between 2 and 4
+instances, waiting 60 seconds after a new instance starts before using its
+metrics. Unhealthy instances are recreated by autohealing.
+
+## API
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/gtg` | 200; with `?details=true`, connection and instance details |
+| GET | `/candidate/<name>` | the candidate, or 404 |
+| POST | `/candidate/<name>` | `{"CandidateName": <name>}`, or 500 |
+| GET | `/candidates` | every candidate, or 404 |
+
+## Firewall rules
+
+```
+internet ─80─▶ HTTP load balancer ─8000─▶ flask-instance-group
+```
+
+`allow-http` (80), `allow-flask` (8000) and `allow-ssh` (22) allow
+`0.0.0.0/0`; `allow-firestore` allows egress on 80 and 443. The instances
+have no public IPs.
 
 ## Prerequisites
 
 * [A Google Cloud Account](https://console.cloud.google.com/)
-* [Install gcloud CLI](https://cloud.google.com/sdk/docs/install) 
-* [Install Latest Terraform](https://developer.hashicorp.com/terraform/install)
-* [Install Latest Packer](https://developer.hashicorp.com/packer/install)
+* [Install gcloud CLI](https://cloud.google.com/sdk/docs/install)
+* [Install Terraform](https://developer.hashicorp.com/terraform/install)
+* [Install Packer](https://developer.hashicorp.com/packer/install)
 
-If this is your first time watching our content, we recommend starting with this video: [GCP + Terraform: Easy Setup](https://youtu.be/3spJpYX4f7I). It provides a step-by-step guide to properly configure Terraform, Packer, and the gcloud CLI.
+Put a service account key in the repository root as `credentials.json`.
+Terraform, Packer and the instances use it. If this is your first time
+watching our content, we recommend starting with this video:
+[GCP + Terraform: Easy Setup](https://youtu.be/3spJpYX4f7I).
 
-## Download this Repository
+## Deploy
 
 ```bash
 git clone https://github.com/mamonaco1973/gcp-flask-mig.git
 cd gcp-flask-mig
+./build/api_setup.sh   # first time: enables the APIs and creates the Firestore database
+./apply.sh             # or .\apply.ps1
 ```
 
-## Build the Code
+Everything deploys to `us-central1`. `apply.sh` ends by running
+`validate.sh`, which waits for the load balancer and runs the smoke test:
 
-Run [check_env](build/check_env.sh) and [api_setup](build/api_setup.sh) then run [apply](apply.sh).
-
-```bash
-~/gcp-flask-mig$ ./apply.sh
-NOTE: Validating that required commands are found in the PATH.
-NOTE: gcloud is found in the current PATH.
-NOTE: packer is found in the current PATH.
-NOTE: terraform is found in the current PATH.
-NOTE: All required commands are available.
-NOTE: Validating credentials.json and test the gcloud command
-Activated service account credentials for: [terraform-build@debug-project-446221.iam.gserviceaccount.com]
-NOTE: Phase 1 Building GCP Infrastructure
-Initializing the backend...
-Initializing provider plugins...
-- Reusing previous version of hashicorp/google from the dependency lock file
-- Using previously-installed hashicorp/google v6.15.0
-
-Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
-
-Terraform will perform the following actions:
-[...]
 ```
-
-## Build Process Overview
-
-The build process is divided into three phases:
-
-1. **Phase 1:** Build the network infrastructure for the project.  
-2. **Phase 2:** Use Packer to create a VM image containing the Flask services.  
-3. **Phase 3:** Configure a Managed Instance Group (MIG) using the VM image from Phase 2, along with the scaling policies.  
-
-
-## Tour of Build Output in the GCP Console
-
-![GCP MIG](flask-mig.png)
-
-## Test the Services
-
-We will test the services with [Postman](https://www.postman.com/downloads/). First run [validate.sh](validate.sh) to get the base URL for the build.
-
-```bash
-~/gcp-flask-mig$ ./validate.sh
-NOTE: Health check endpoint is http://34.117.25.142/gtg?details=true
+NOTE: Health check endpoint is http://203.0.113.10/gtg?details=true
 ✓ good to go passed
 ✓ insert passed
 ✓ verification passed
 ✓ candidate list passed
-azureuser@develop-vm:~/gcp-flask-mig$
-
 ```
 
-Copy the value from validate `http://34.117.25.142/gtg?details=true` and paste into Postman.
+## Try it
 
-![Postman](postman.png)
+1. Open the `/gtg?details=true` URL in Postman (or `curl`) a few times: the
+   instance changes as the load balancer spreads requests.
 
-### HTTP Endpoint Summary
+   ![Postman](postman.png)
 
-#### `/gtg` (GET)
-- **Purpose**: Health check.
-- **Response**: 
-  - `{"connected": "true", "instance-id": <instance_id>}` (if `details` query parameter is provided).
-  - 200 OK with no body otherwise.
+2. Load the group: the instances have no public IP, so connect with
+   `gcloud compute ssh <instance> --tunnel-through-iap` and run
+   `stress --cpu 2 --timeout 600`. The autoscaler adds instances as CPU
+   climbs past 60% and removes them after the load stops.
 
-#### `/candidate/<name>` (GET)
-- **Purpose**: Retrieve a candidate by name.
-- **Response**: 
-  - Candidate details (JSON) with status `200`.
-  - `"Not Found"` with status `404` if no candidate is found.
-
-#### `/candidate/<name>` (POST)
-- **Purpose**: Add or update a candidate by name.
-- **Response**: 
-  - `{"CandidateName": <name>}` with status `200`.
-  - `"Unable to update"` with status `500` on failure.
-
-#### `/candidates` (GET)
-- **Purpose**: Retrieve all candidates.
-- **Response**: 
-  - List of candidates (JSON) with status `200`.
-  - `"Not Found"` with status `404` if no candidates exist.
-
-## Simulate Load
-
-We will access the VM instances and execute the `stress` command to simulate a high CPU load. This process will demonstrate the system's ability to dynamically scale up by adding VM instances in response to increased CPU utilization and subsequently scale down by removing nodes as the load decreases
-
-### How Scaling Works
-
-#### 1. **Managed Instance Group (MIG):**
-- The **Managed Instance Group** (`google_compute_region_instance_group_manager`) ensures that a group of identical VM instances is maintained.
-- It uses an **Instance Template** to define the configuration for all instances (e.g., machine type, boot image, and network settings).
-- The MIG initially starts with a **target size** of 2 instances and supports auto-healing based on a health check.
-
-#### 2. **Health Check for Auto-Healing:**
-- A **Health Check** (`google_compute_region_autoscaler`) is configured to monitor the `/gtg` endpoint on port `8000` of the instances.
-- If an instance is deemed unhealthy (fails the health check), the MIG automatically replaces it with a new instance.
-
-#### 3. **Autoscaler for Dynamic Scaling:**
-- The **Autoscaler** (`google_compute_autoscaler`) dynamically adjusts the number of instances in the MIG based on CPU utilization.
-- The scaling policies are defined as follows:
-  - **Minimum number of instances:** 2
-  - **Maximum number of instances:** 4
-  - **Target CPU utilization:** 60%
-- If the average CPU utilization across instances exceeds 60%, the Autoscaler adds more instances (up to the maximum of 4) to handle the increased load.
-- If the CPU utilization falls below 60%, the Autoscaler reduces the number of instances (down to the minimum of 2) to save resources.
-
-#### 4. **Cooldown Period:**
-- A **cooldown period** of 60 seconds is set to prevent rapid scaling actions, allowing time for new instances to stabilize before further scaling decisions are made.
-
-### Workflow of Scaling:
-
-1. **Initial Deployment:**
-   - Two instances are created in the MIG as per the defined target size.
-
-2. **Scaling Up:**
-   - When the average CPU utilization across instances exceeds 60%, additional instances are launched (up to 4).
-
-3. **Scaling Down:**
-   - When the average CPU utilization drops below 60%, instances are terminated (down to 2).
-
-4. **Health Monitoring:**
-   - Instances are continuously monitored using the health check. Unhealthy instances are automatically replaced.
-
-This setup ensures that the application can handle varying loads efficiently while maintaining optimal resource usage and availability.
-
-## Run the "destroy" script when you are done
+## Teardown
 
 ```bash
-~/gcp-flask-mig$ ./destroy.sh
-NOTE: Destroying GCP Infrastucture
-Updated property [core/project].
-Initializing the backend...
-Initializing provider plugins...
-- Reusing previous version of hashicorp/google from the dependency lock file
-- Using previously-installed hashicorp/google v6.15.0
-
-Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
-google_compute_health_check.http_health_check: Refreshing state... [id=projects/debug-project-446221/global/healthChecks/http-health-check]
-google_compute_global_address.lb_ip: Refreshing state... [id=projects/debug-project-446221/global/addresses/flask-lb-ip]
-google_project_iam_member.flask_firestore_access: Refreshing state... [id=debug-project-446221/roles/datastore.user/serviceAccount:terraform-build@debug-project-446221.iam.gserviceaccount.com]
-data.google_compute_image.flask_packer_image: Reading...
-google_compute_network.flask_vpc: Refreshing state... [id=projects/debug-project-446221/global/networks/flask-vpc]
-[...]
+./destroy.sh     # or .\destroy.ps1: destroys the group and load balancer, deletes the images, then destroys the network
 ```
+
+## Notes
+
+- **Lab only.** The load balancer is plain HTTP, and the instances run as the
+  same service account as Terraform with the `cloud-platform` scope.
