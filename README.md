@@ -118,7 +118,7 @@ NOTE: Health check endpoint is http://203.0.113.10/gtg?details=true
 ## Teardown
 
 ```bash
-./destroy.sh     # or .\destroy.ps1: destroys the group and load balancer, deletes the images, then destroys the network
+./destroy.sh     # or .\destroy.ps1: destroys the group and load balancer, then the network, then deletes the images
 ```
 
 ## Notes
